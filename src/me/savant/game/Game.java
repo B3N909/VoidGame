@@ -6,6 +6,7 @@ import models.TexturedModel;
 import normalMappingObjConverter.NormalMappedObjLoader;
 
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.util.vector.Vector2f;
 import org.lwjgl.util.vector.Vector3f;
 
 import render.Loader;
@@ -18,6 +19,7 @@ import texture.Texture;
 import water.WaterTile;
 import engine.GameEngine;
 import engine.World;
+import engineui.GuiManager;
 import engineui.TextureManager;
 import entities.Camera;
 import entities.Entity;
@@ -25,6 +27,7 @@ import entities.GameObject;
 import entities.Light;
 import entities.Player;
 import file.FileManager;
+import gui.GuiTexture;
 
 public class Game extends GameEngine
 {
@@ -32,10 +35,8 @@ public class Game extends GameEngine
 	World world;
 	
 	static Game game;
-	public static float percent = 0f;
 	public static void main(String[] args)
 	{
-		new me.savant.game.Shader();	
 		game = new Game("Infiniteless - Demo");
 		game.getDisplay().createDisplay();
 		game.getUniverse().ready();
@@ -46,6 +47,7 @@ public class Game extends GameEngine
 		System.out.println("[Loading] 60%");
 		game.getUniverse().syncData();
 		System.out.println("[Loading] 100%");
+		new PlayerUI();
 		game.getUniverse().start();
 	}
 	
@@ -65,12 +67,22 @@ public class Game extends GameEngine
 				TextureManager.open();
 			}
 		}
+		if(Keyboard.isKeyDown(Keyboard.KEY_F2))
+		{
+			if(!GuiManager.isOpen())
+			{
+				GuiManager.open();
+			}
+		}
 	}
 	
 	public void start()
 	{
 		//Getting 
 		loader = getLoader();
+		
+		GuiTexture loadingTexture = new GuiTexture(loader, "res/loadingScreen_x2.png", new Vector2f(0f, 0f), new Vector2f(1f, 1f));
+		loadingTexture.setEnabled(false);
 		
 		//Player
 		Texture texture = new Texture(loader.loadTexture("res/blue.png"));
@@ -107,7 +119,7 @@ public class Game extends GameEngine
 		world.setCamera(camera);
 		Light sun = new Light(new Vector3f(200, 200, 200), new Vector3f(1f, 1f, 1f));
 		world.setLight(sun);
-		WaterTile waterTile = new WaterTile(200, -200, 5, 1000);
+		WaterTile waterTile = new WaterTile(200, -200, 5, 200);
 		world.setWater(waterTile);
 		world.setPlayer(player);
 		world.instantiate(player);
@@ -115,6 +127,7 @@ public class Game extends GameEngine
 		world.instantiate(terrain);
 		world.instantiate(waterTile);
 		world.instantiate(barrel);
+		world.instantiate(loadingTexture);
 	}
 	
 	public void cleanUp()
