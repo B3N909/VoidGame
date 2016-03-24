@@ -15,7 +15,7 @@ public class PlayerUI extends GameScript
 	public void start()
 	{
 		GuiTexture gui = new GuiTexture(getLoader(), "res/logo.png", new Vector2f(0.95f, 0.82f), new Vector2f(0.25f, 0.25f));
-		getWorld().instantiate(gui);
+		getWorld().spawn(gui);
 		
 		FontType font = new FontType(getLoader().loadTexture("res/candara.png"), new File("res/candara.fnt"));
 		GuiText text = new GuiText("Savant's Game Engine", 3f, font, new Vector2f(0, 0), 1f, true);

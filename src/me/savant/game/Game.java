@@ -1,5 +1,7 @@
 package me.savant.game;
 
+import java.util.Random;
+
 import models.ModelData;
 import models.RawModel;
 import models.TexturedModel;
@@ -34,19 +36,28 @@ public class Game extends GameEngine
 	Loader loader;
 	World world;
 	
+	static boolean fastLoadup = true;
+	
 	static Game game;
 	public static void main(String[] args)
 	{
 		game = new Game("Infiniteless - Demo");
 		game.getDisplay().createDisplay();
 		game.getUniverse().ready();
-		System.out.println("[Loading] 10%");
-		FileManager fileManager = new FileManager();
-		TextureManager.fileManager = fileManager;
-		game.getUniverse().setFileManager(fileManager);
-		System.out.println("[Loading] 60%");
-		game.getUniverse().syncData();
-		System.out.println("[Loading] 100%");
+		if(!fastLoadup)
+		{
+			System.out.println("[Loading] 10%");
+			FileManager fileManager = new FileManager();
+			TextureManager.fileManager = fileManager;
+			game.getUniverse().setFileManager(fileManager);
+			System.out.println("[Loading] 60%");
+			game.getUniverse().syncData();
+			System.out.println("[Loading] 100%");
+		}
+		else
+		{
+			System.out.println("[Loading] Skiped File Cache and Conversion to save time!");
+		}
 		new PlayerUI();
 		game.getUniverse().start();
 	}
@@ -56,6 +67,7 @@ public class Game extends GameEngine
 		super(gameName);
 	}
 	
+	boolean firstRun = true;
 	public void update()
 	{
 		world.update();
@@ -74,17 +86,22 @@ public class Game extends GameEngine
 				GuiManager.open();
 			}
 		}
+		if(firstRun)
+		{
+			world.createShadowRenderer();
+			shadowMap = new GuiTexture(getRenderer().getShadowMapTexture(), new Vector2f(0.5f, 0.5f), new Vector2f(0.5f, 0.5f));
+			world.spawn(shadowMap);
+			firstRun = false;
+		}
 	}
+	
+	GuiTexture shadowMap;
 	
 	public void start()
 	{
-		//Getting 
 		loader = getLoader();
 		
-		GuiTexture loadingTexture = new GuiTexture(loader, "res/loadingScreen_x2.png", new Vector2f(0f, 0f), new Vector2f(1f, 1f));
-		loadingTexture.setEnabled(false);
-		
-		//Player
+//		********** Creating World **********
 		Texture texture = new Texture(loader.loadTexture("res/blue.png"));
 		texture.setSpecularDamper(10);
 		texture.setSpecular(1);
@@ -94,8 +111,15 @@ public class Game extends GameEngine
 		playerTexture.setSpecular(1);
 		TexturedModel playerModel = new TexturedModel(playerRawModel, texture);
 		Player player = new Player(playerModel, new Vector3f(20, 3, -20), 0, 90, 0, 0.75f);
+		Camera camera = new Camera(player);
+		Light sun = new Light(new Vector3f(1000, 1500, -1000), new Vector3f(1f, 1f, 1f));
+		world = new World(camera, player, sun);
 		
-		//Terrain
+//		********** Debug GUI **********
+		GuiTexture loadingTexture = new GuiTexture(loader, "res/loadingScreen_x2.png", new Vector2f(0f, 0f), new Vector2f(1f, 1f));
+		loadingTexture.setEnabled(false);
+		
+//		********** Terrain **********
 		TerrainTexture backgroundTexture = new TerrainTexture(loader.loadTexture("res/Nature/Textures/ground4.png"));
 		TerrainTexture rTexture = new TerrainTexture(loader.loadTexture("res/mud.png"));
 		TerrainTexture gTexture = new TerrainTexture(loader.loadTexture("res/Nature/Textures/ground15.png"));
@@ -105,29 +129,38 @@ public class Game extends GameEngine
 		Terrain terrain = new Terrain(0, -1, loader, texturePack, blendMap);
 		terrain.createInfinite();
 		
-		//Normal Map Demo
+//		********** Shadowing Test **********
 		TexturedModel barrelModel = new TexturedModel(NormalMappedObjLoader.loadOBJ("barrel", loader), new Texture(loader.loadTexture("res/barrel.png")));
 		barrelModel.getTexture().setNormalMap(loader.loadTexture("res/barrelNormal.png"));
 		barrelModel.getTexture().setSpecularDamper(10);
 		barrelModel.getTexture().setSpecular(0.5f);
-		Entity barrel = new GameObject(barrelModel, new Vector3f(35, 35, -35), 0, 0, 0, 1f);
-		barrel.setShader(Shader.NORMAL);
+		Random random = new Random();
+		for(int x = 0; x < 100; x++)
+		{
+			for(int z = 0; z > -100; z--)
+			{
+				if(random.nextInt(100) > 95)
+				{
+					Entity entity = new GameObject(barrelModel, new Vector3f(x * 15, 20, z * 15), 0, 0, 0, 1f);
+					entity.setShader(Shader.DEFAULT);
+					world.spawn(entity);
+				}
+			}
+		}
 		
-		//World Stuff
-		world = new World(getRenderer(), getGuiRenderer(), getWaterRenderer());
-		Camera camera = new Camera(player);
-		world.setCamera(camera);
-		Light sun = new Light(new Vector3f(200, 200, 200), new Vector3f(1f, 1f, 1f));
-		world.setLight(sun);
+//		********** NormalMap Test **********
+		Entity barrel = new GameObject(barrelModel, new Vector3f(35, 35, -35), 0, 0, 0, 1f);
+		barrel.setShader(Shader.DEFAULT);
+		
+//		********** Water **********
 		WaterTile waterTile = new WaterTile(200, -200, 5, 200);
-		world.setWater(waterTile);
-		world.setPlayer(player);
-		world.instantiate(player);
-		world.instantiate(sun);
-		world.instantiate(terrain);
-		world.instantiate(waterTile);
-		world.instantiate(barrel);
-		world.instantiate(loadingTexture);
+		
+//		********** Spawning Everything **********
+		world.spawn(terrain);
+		world.spawn(waterTile);
+		world.spawn(barrel);
+		world.spawn(loadingTexture);
+		world.spawn(shadowMap);
 	}
 	
 	public void cleanUp()
